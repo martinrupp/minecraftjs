@@ -24,7 +24,7 @@ function Block(x, y, z) {
 		var block = new THREE.Mesh(blockBox, blockMesh);
 		scene.add(block);
 		block.position.x = this.x;
-		block.position.y = this.y;
+		block.position.y = this.y-20;
 		block.position.z = this.z;
 
 		// the wireframe around it
@@ -32,7 +32,7 @@ function Block(x, y, z) {
 		var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: 0xffffff}) );
 		scene.add(line);
 		line.position.x = this.x;
-		line.position.y = this.y;
+		line.position.y = this.y-20;
 		line.position.z = this.z;
 
 	}
@@ -50,7 +50,7 @@ for(var x = -D; x < D; x++) {
 	xoff = 0;
 	for(var z = -D; z < D; z++) {
 		var v = Math.round(noise.perlin2(xoff, zoff) * amplitude / 5) *5;
-		v = v - 20;
+		//v = v - 20;
 
 		blocks.push( new Block(x * 5, v, z * 5) );
 		xoff = xoff + inc;
@@ -96,6 +96,8 @@ document.addEventListener("keyup", function(e) {
 
 // game state update function
 var movingSpeed = 1.5;
+var ySpeed = 0;
+var gravity = 1;
 function update() {
 	if(keys.includes("w")) {
 		controls.moveForward(movingSpeed);
@@ -108,6 +110,23 @@ function update() {
 	}
 	if(keys.includes("d")) {
 		controls.moveRight(movingSpeed);
+	}
+
+	camera.position.y = camera.position.y - ySpeed;
+	ySpeed += gravity;
+
+	for( var i =0; i < blocks.length; i++ ) {
+		var b = blocks[i];
+		if(camera.position.x <= b.x+5 && camera.position.x >= b.x &&
+			camera.position.z <= b.z+5 && camera.position.z >= b.z) {
+			console.log(b);
+			if(camera.position.y < b.y) 
+			{
+				camera.position.y = b.y;
+				ySpeed = 0;
+				break;
+			}
+		}
 	}
 }
 
