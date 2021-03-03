@@ -69,12 +69,46 @@ document.body.addEventListener("click", function() {
 });
 
 controls.addEventListener("lock", function() {
+
 });
+
 controls.addEventListener("unlock", function() {
 });
 
-function update() {
+// keyboard control
+var keys = []
+document.addEventListener("keydown", function(e) {
+	keys.push(e.key);
+	if(e.key == " ") {
+		ySpeed = -7;		
+	}
+});
 
+document.addEventListener("keyup", function(e) {
+	var newArr = [];
+	for( var i = 0; i < keys.length; i++) {
+		if(keys[i] != e.key)
+			newArr.push(keys[i]);
+	}
+	keys = newArr;
+});
+
+
+// game state update function
+var movingSpeed = 1.5;
+function update() {
+	if(keys.includes("w")) {
+		controls.moveForward(movingSpeed);
+	}
+	if(keys.includes("a")) {
+		controls.moveRight(-movingSpeed);
+	}
+	if(keys.includes("s")) {
+		controls.moveForward(-movingSpeed);
+	}
+	if(keys.includes("d")) {
+		controls.moveRight(movingSpeed);
+	}
 }
 
 // Resize Window listener for resetting camera
@@ -85,7 +119,7 @@ window.addEventListener("resize", function() {
 });
 
 
-// game loop
+// game render/drawing function
 function render() {
 	renderer.render(scene, camera);
 }
