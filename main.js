@@ -45,7 +45,7 @@ var xoff = 0;
 var zoff = 0;
 var inc = 0.05;
 var amplitude = 50;
-var D = 30;
+var D = 20;
 for(var x = -D; x < D; x++) {
 	xoff = 0;
 	for(var z = -D; z < D; z++) {
@@ -77,10 +77,12 @@ controls.addEventListener("unlock", function() {
 
 // keyboard control
 var keys = []
+var canJump = true;
 document.addEventListener("keydown", function(e) {
 	keys.push(e.key);
-	if(e.key == " ") {
-		ySpeed = -7;		
+	if(e.key == " " && canJump) {
+		ySpeed = -1.3;		
+		canJump = false;
 	}
 });
 
@@ -95,9 +97,9 @@ document.addEventListener("keyup", function(e) {
 
 
 // game state update function
-var movingSpeed = 1.5;
+var movingSpeed = .7;
 var ySpeed = 0;
-var gravity = 1;
+var gravity = 0.08;
 function update() {
 	if(keys.includes("w")) {
 		controls.moveForward(movingSpeed);
@@ -124,6 +126,8 @@ function update() {
 			{
 				camera.position.y = b.y;
 				ySpeed = 0;
+				// we hit the ground
+				canJump = true;
 				break;
 			}
 		}
