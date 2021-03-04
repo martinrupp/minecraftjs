@@ -1,3 +1,9 @@
+var autoJump = true;
+function toggleAutoJump() {
+	autoJump = !autoJump;
+	document.getElementById("autoJumpButton").innerHTML = autoJump ? "AutoJump : On" : "AutoJump : Off" 
+}
+
 // setup scene and renderer
 var scene = new THREE.Scene();
 var renderer = new THREE.WebGLRenderer();
@@ -10,6 +16,7 @@ var near = 0.1; // near clipping plane
 var far = 1000; // far clipping plane
 var aspectRatio = window.innerWidth / window.innerHeight;
 var camera = new THREE.PerspectiveCamera(FOV, aspectRatio, near, far);
+var blockSize = 5;
 
 // a block
 function Block(x, y, z) {
@@ -17,14 +24,16 @@ function Block(x, y, z) {
 	this.y = y;
 	this.z = z;
 
+	var playerHeight = 15;
+
 	this.display = function() {
 		// the solid block
-		var blockBox = new THREE.BoxBufferGeometry(5, 5, 5); // width, height, depth
+		var blockBox = new THREE.BoxBufferGeometry(blockSize, blockSize, blockSize); // width, height, depth
 		var blockMesh = new THREE.MeshBasicMaterial({color: 0x003300});
 		var block = new THREE.Mesh(blockBox, blockMesh);
 		scene.add(block);
 		block.position.x = this.x;
-		block.position.y = this.y-20;
+		block.position.y = this.y - playerHeight;
 		block.position.z = this.z;
 
 		// the wireframe around it
@@ -32,11 +41,14 @@ function Block(x, y, z) {
 		var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: 0xffffff}) );
 		scene.add(line);
 		line.position.x = this.x;
-		line.position.y = this.y-20;
+		line.position.y = this.y - playerHeight;
 		line.position.z = this.z;
 
 	}
 }
+
+// var axesHelper = new THREE.AxesHelper( 5 );
+// scene.add( axesHelper );
 
 // construct blocks
 
@@ -52,7 +64,7 @@ for(var x = -D; x < D; x++) {
 		var v = Math.round(noise.perlin2(xoff, zoff) * amplitude / 5) *5;
 		//v = v - 20;
 
-		blocks.push( new Block(x * 5, v, z * 5) );
+		blocks.push( new Block(x * blockSize, v, z * blockSize) );
 		xoff = xoff + inc;
 	}
 	zoff = zoff + inc;
@@ -95,42 +107,50 @@ document.addEventListener("keyup", function(e) {
 	keys = newArr;
 });
 
+function blockSameXZ(b) {
+	return camera.position.x <= b.x + blockSize/2 && camera.position.x >= b.x - blockSize/2 &&
+		camera.position.z <= b.z +blockSize/2 && camera.position.z >= b.z - blockSize/2;
+}
+function collidedWithBlock() {
+	return blocks.find( b => { return blockSameXZ(b) && camera.position.y == b.y - blockSize; } ) !== undefined;
+}
 
 // game state update function
 var movingSpeed = .7;
 var ySpeed = 0;
 var gravity = 0.08;
 function update() {
-	if(keys.includes("w")) {
+	if(keys.includes("w")) {		
 		controls.moveForward(movingSpeed);
+		if( !autoJump && collidedWithBlock() )
+		 	controls.moveForward(-movingSpeed);
+			
 	}
 	if(keys.includes("a")) {
 		controls.moveRight(-movingSpeed);
+		if( !autoJump && collidedWithBlock() )
+		 	controls.moveRight(movingSpeed);
 	}
 	if(keys.includes("s")) {
 		controls.moveForward(-movingSpeed);
+		if( !autoJump && collidedWithBlock() )
+		 	controls.moveForward(movingSpeed);
 	}
 	if(keys.includes("d")) {
 		controls.moveRight(movingSpeed);
+		if( !autoJump && collidedWithBlock() )
+		 	controls.moveRight(-movingSpeed);
 	}
 
 	camera.position.y = camera.position.y - ySpeed;
 	ySpeed += gravity;
 
-	for( var i =0; i < blocks.length; i++ ) {
-		var b = blocks[i];
-		if(camera.position.x <= b.x+5 && camera.position.x >= b.x &&
-			camera.position.z <= b.z+5 && camera.position.z >= b.z) {
-			console.log(b);
-			if(camera.position.y < b.y) 
-			{
-				camera.position.y = b.y;
-				ySpeed = 0;
-				// we hit the ground
-				canJump = true;
-				break;
-			}
-		}
+	var hitblock = blocks.find( b => blockSameXZ(b) && camera.position.y < b.y );
+	if( hitblock !== undefined) {
+		camera.position.y = hitblock.y;
+		ySpeed = 0;
+		// we hit the ground
+		canJump = true;
 	}
 }
 

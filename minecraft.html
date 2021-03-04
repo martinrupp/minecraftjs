@@ -6,9 +6,16 @@
 		body { 
 			margin: 0;
 		}
+		#autoJumpButton {
+			position: absolute;
+			left: 20px;
+			top: 20px;
+
+		}
 	</style>
 </head>
 <body>
+	<button id="autoJumpButton" onclick = "toggleAutoJump()">AutoJump : On</button>
 	<script src = "external/three.js"></script>
 	<script src = "external/PointerLockControls.js"></script>
 	<script src = "external/perlin.js"></script>
