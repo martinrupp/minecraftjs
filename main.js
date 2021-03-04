@@ -18,6 +18,17 @@ var aspectRatio = window.innerWidth / window.innerHeight;
 var camera = new THREE.PerspectiveCamera(FOV, aspectRatio, near, far);
 var blockSize = 5;
 
+
+var loader = new THREE.TextureLoader();
+let materialArray = [
+	new THREE.MeshBasicMaterial({map : loader.load("texture/side4.jpg")}),
+	new THREE.MeshBasicMaterial({map : loader.load("texture/side1.jpg")}),
+	new THREE.MeshBasicMaterial({map : loader.load("texture/top.jpg")}),
+	new THREE.MeshBasicMaterial({map : loader.load("texture/bottom.jpg")}),
+	new THREE.MeshBasicMaterial({map : loader.load("texture/side2.jpg")}),
+	new THREE.MeshBasicMaterial({map : loader.load("texture/side3.jpg")})
+];
+
 // a block
 function Block(x, y, z) {
 	this.x = x;
@@ -29,8 +40,8 @@ function Block(x, y, z) {
 	this.display = function() {
 		// the solid block
 		var blockBox = new THREE.BoxBufferGeometry(blockSize, blockSize, blockSize); // width, height, depth
-		var blockMesh = new THREE.MeshBasicMaterial({color: 0x003300});
-		var block = new THREE.Mesh(blockBox, blockMesh);
+		//var blockMesh = new THREE.MeshBasicMaterial({color: 0x003300});
+		var block = new THREE.Mesh(blockBox, materialArray);
 		scene.add(block);
 		block.position.x = this.x;
 		block.position.y = this.y - playerHeight;
@@ -51,7 +62,6 @@ function Block(x, y, z) {
 // scene.add( axesHelper );
 
 // construct blocks
-
 var blocks = [];
 var xoff = 0;
 var zoff = 0;
@@ -73,6 +83,7 @@ for(var x = -D; x < D; x++) {
 for( var i =0; i < blocks.length; i++) {
 	blocks[i].display();
 }
+
 
 // camera control
 var controls = new THREE.PointerLockControls(camera, document.body);
