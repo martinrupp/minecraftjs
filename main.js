@@ -34,6 +34,8 @@ function Block(x, y, z) {
 	this.x = x;
 	this.y = y;
 	this.z = z;
+	this.mesh;
+	this.line;
 
 	var playerHeight = 15;
 
@@ -41,19 +43,19 @@ function Block(x, y, z) {
 		// the solid block
 		var blockBox = new THREE.BoxBufferGeometry(blockSize, blockSize, blockSize); // width, height, depth
 		//var blockMesh = new THREE.MeshBasicMaterial({color: 0x003300});
-		var block = new THREE.Mesh(blockBox, materialArray);
-		scene.add(block);
-		block.position.x = this.x;
-		block.position.y = this.y - playerHeight;
-		block.position.z = this.z;
+		this.mesh = new THREE.Mesh(blockBox, materialArray);
+		scene.add(this.mesh);
+		this.mesh.position.x = this.x;
+		this.mesh.position.y = this.y - playerHeight;
+		this.mesh.position.z = this.z;
 
 		// the wireframe around it
 		var edges = new THREE.EdgesGeometry(blockBox);
-		var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: 0xffffff}) );
-		scene.add(line);
-		line.position.x = this.x;
-		line.position.y = this.y - playerHeight;
-		line.position.z = this.z;
+		this.line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: 0xffffff}) );
+		scene.add(this.line);
+		this.line.position.x = this.x;
+		this.line.position.y = this.y - playerHeight;
+		this.line.position.z = this.z;
 
 	}
 }
@@ -61,28 +63,131 @@ function Block(x, y, z) {
 // var axesHelper = new THREE.AxesHelper( 5 );
 // scene.add( axesHelper );
 
-// construct blocks
+//construct blocks
 var blocks = [];
-var xoff = 0;
-var zoff = 0;
+
+
+
+camera.position.x = 0;
+camera.position.y = 0;
+camera.position.y = 50;
+
+var minx, minz, maxx, maxz;
+
 var inc = 0.05;
 var amplitude = 50;
-var D = 20;
-for(var x = -D; x < D; x++) {
-	xoff = 0;
-	for(var z = -D; z < D; z++) {
-		var v = Math.round(noise.perlin2(xoff, zoff) * amplitude / 5) *5;
-		//v = v - 20;
+function getBlock(x, z) {
+	var xoff = inc*x;
+	var zoff = inc*z;
+	var v = Math.round(noise.perlin2(xoff, zoff) * amplitude / 5) *5;
+	return new Block(x * blockSize, v, z * blockSize);
+}
 
-		blocks.push( new Block(x * blockSize, v, z * blockSize) );
-		xoff = xoff + inc;
+function generate() {
+	xblockpos = camera.position.x / 5
+	zblockpos = camera.position.z / 5
+	var chunkSize = 10;
+
+	minx = xblockpos - chunkSize;
+	maxx = xblockpos + chunkSize;
+	minz = zblockpos - chunkSize;	
+	maxz = zblockpos + chunkSize;
+	for(var x = minx; x < maxx; x++) {
+		for(var z = minz; z < maxz; z++) {
+			blocks.push( getBlock(x, z) );
+		}
 	}
-	zoff = zoff + inc;
+
+	for( var i =0; i < blocks.length; i++) {
+		blocks[i].display();
+	}
 }
 
-for( var i =0; i < blocks.length; i++) {
-	blocks[i].display();
+var chunkSize = 10;
+function blockOutOfSight(b) {
+	return Math.abs(b.x-camera.position.x) > (chunkSize+2)*blockSize ||
+		 Math.abs(b.z-camera.position.z) > (chunkSize+2)*blockSize
 }
+
+function removeBlockFromScene(b) {
+	scene.remove(b.mesh);
+	scene.remove(b.line);
+}
+
+function updateBlocks() {
+	var xoff = 0;
+	var zoff = 0;
+	var inc = 0.05;
+	var amplitude = 50;
+	var D = 20;
+	xblockpos = (camera.position.x / 5) | 0
+	zblockpos = (camera.position.z / 5) | 0	
+
+	var minx2 = xblockpos - chunkSize;
+	var maxx2 = xblockpos + chunkSize;
+	var minz2 = zblockpos - chunkSize;
+	var maxz2 = zblockpos + chunkSize;
+	if( minx2 == minx && minz == minz2) return;
+
+	for(var x = minx2; x < maxx2; x++) {
+		for(var z = minz2; z < maxz2; z++) {
+			if( x >= minx && x < maxx && z >= minz && z < maxz) continue;
+			var b = getBlock(x, z);
+			blocks.push(b);
+			b.display();
+		}
+	}
+
+	blocks.filter(blockOutOfSight).forEach( removeBlockFromScene );
+	blocks = blocks.filter( b => !blockOutOfSight(b));
+
+	minx = minx2;
+	minz = minz2;
+	maxx = maxx2;
+	maxz = maxz2;
+}
+
+generate();
+// for(var x = -D; x < D; x++) {
+// 	xoff = 0;
+// 	for(var z = -D; z < D; z++) {
+// 		var v = Math.round(noise.perlin2(xoff, zoff) * amplitude / 5) *5;
+// 		//v = v - 20;
+
+// 		blocks.push( new Block(x * blockSize, v, z * blockSize) );
+// 		xoff = xoff + inc;
+// 	}
+// 	zoff = zoff + inc;
+// }
+
+
+// camera.position.y = 50;
+
+// var chunks = [];
+// var xoff = 0;
+// var zoff = 0;
+// var inc = 0.05;
+// var amplitude = 30 + (Math.random() * 70);
+// var renderDistance = 3;
+// var chunkSize = 10;
+
+
+// for(var i =0; i < renderDistance; i++) {
+// 	var chunk = [];
+// 	for(var j =0; j < renderDistance; j++) {
+// 		for(var x = xblockpos -chunkSize; x < xblockpos +chunkSize; x++) {
+// 			for(var z = zblockpos -chunkSize; z < zblockpos +chunkSize; z++) {
+// 				xoff = inc*x;
+// 				zoff = inc*z;
+// 				var v = Math.round(noise.perlin2(xoff, zoff) * amplitude / 5) *5;
+// 				chunk.push(new Block(x * blockSize, v, z * blockSize) );
+// 			}
+// 		}
+// 	}
+// 	chunks.push(chunk);
+// }
+
+
 
 
 // camera control
@@ -163,6 +268,8 @@ function update() {
 		// we hit the ground
 		canJump = true;
 	}
+
+	 updateBlocks();
 }
 
 // Resize Window listener for resetting camera
