@@ -4,6 +4,10 @@ function toggleAutoJump() {
 	document.getElementById("autoJumpButton").innerHTML = autoJump ? "AutoJump : On" : "AutoJump : Off" 
 }
 
+var stats = new Stats(); // three.js stats (FPS)
+stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild(stats.dom);
+
 // setup scene and renderer
 var scene = new THREE.Scene();
 var renderer = new THREE.WebGLRenderer();
@@ -287,9 +291,11 @@ function render() {
 
 // the requestAnimationFrame update loop
 function GameLoop() {
-	requestAnimationFrame(GameLoop);
+	stats.begin();
 	update();
 	render();
+	stats.end();
+	requestAnimationFrame(GameLoop);
 }
 
 GameLoop();
