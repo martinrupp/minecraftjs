@@ -10,6 +10,10 @@ document.body.appendChild(stats.dom);
 
 // setup scene and renderer
 var scene = new THREE.Scene();
+// background
+scene.background = new THREE.Color(0x00ffff);
+// fog
+scene.fog = new THREE.Fog(0x555555, 10, 200);
 var renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -33,6 +37,15 @@ let materialArray = [
 	new THREE.MeshBasicMaterial({map : loader.load("texture/side3.jpg")})
 ];
 
+var directions = [
+	[ blockSize, 0,          0,        ], // right
+	[-blockSize, 0,          0,        ], // left
+	[ 0,         -blockSize, 0,        ], // top
+	[ 0,         blockSize,  0,        ], // bottom
+	[ 0,         0,          blockSize ], // front
+	[ 0,         0,          -blockSize ] // back
+]
+
 // a block
 function Block(x, y, z) {
 	this.x = x;
@@ -42,12 +55,30 @@ function Block(x, y, z) {
 	this.line;
 
 	var playerHeight = 15;
+	this.getVoxel = function(x, y, z) {
+		return blocks.find( b => { return b.x == x && b.y == y && b.z ==z } ) !== undefined;
+	}
+
+	this.getFaces = function() {
+		var faces = []
+		for( var i = 0; i < directions.length; i++ ) {
+			 if( i == 3 || // bottom
+			 	this.getVoxel( this.x + directions[i][0], this.y + directions[i][1], this.z + directions[i][2]) ) {
+				faces.push(null);
+			 } else {
+			 	faces.push( materialArray[i] );
+			 }
+		}
+		return faces;
+	}
 
 	this.display = function() {
 		// the solid block
 		var blockBox = new THREE.BoxBufferGeometry(blockSize, blockSize, blockSize); // width, height, depth
+
+		this.mesh = new THREE.Mesh(blockBox, this.getFaces() );
 		//var blockMesh = new THREE.MeshBasicMaterial({color: 0x003300});
-		this.mesh = new THREE.Mesh(blockBox, materialArray);
+		 //this.mesh = new THREE.Mesh(blockBox, materialArray);
 		scene.add(this.mesh);
 		this.mesh.position.x = this.x;
 		this.mesh.position.y = this.y - playerHeight;
@@ -90,7 +121,7 @@ function getBlock(x, z) {
 function generate() {
 	xblockpos = camera.position.x / 5
 	zblockpos = camera.position.z / 5
-	var chunkSize = 10;
+	var chunkSize = 20;
 
 	minx = xblockpos - chunkSize;
 	maxx = xblockpos + chunkSize;
@@ -107,7 +138,7 @@ function generate() {
 	}
 }
 
-var chunkSize = 10;
+var chunkSize = 20;
 function blockOutOfSight(b) {
 	return Math.abs(b.x-camera.position.x) > (chunkSize+2)*blockSize ||
 		 Math.abs(b.z-camera.position.z) > (chunkSize+2)*blockSize

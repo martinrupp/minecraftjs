@@ -4,6 +4,7 @@ This will be a redo of the awesome https://github.com/HritikRC/Minecraft from th
 
 - Part 1 Basic World (done) https://www.youtube.com/watch?v=eMNdWrx4OPg
 - Part 2 Controls, Jumping and Moving (in progress) https://www.youtube.com/watch?v=q8jULxvmZ7A
+- Part 8 Stats, Removing Unwanted Faces https://www.youtube.com/watch?v=k4jHSMbaAlU&t=1s
 
 
 external Resources:
