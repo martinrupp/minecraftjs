@@ -13,7 +13,7 @@ var scene = new THREE.Scene();
 // background
 scene.background = new THREE.Color(0x00ffff);
 // fog
-scene.fog = new THREE.Fog(0x555555, 10, 200);
+scene.fog = new THREE.Fog(0x555555, 10, 300);
 var renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -37,62 +37,12 @@ let materialArray = [
 	new THREE.MeshBasicMaterial({map : loader.load("texture/side3.jpg")})
 ];
 
-var directions = [
-	[ blockSize, 0,          0,        ], // right
-	[-blockSize, 0,          0,        ], // left
-	[ 0,         -blockSize, 0,        ], // top
-	[ 0,         blockSize,  0,        ], // bottom
-	[ 0,         0,          blockSize ], // front
-	[ 0,         0,          -blockSize ] // back
-]
-
+var playerHeight = 15;
 // a block
 function Block(x, y, z) {
 	this.x = x;
 	this.y = y;
 	this.z = z;
-	this.mesh;
-	this.line;
-
-	var playerHeight = 15;
-	this.getVoxel = function(x, y, z) {
-		return blocks.find( b => { return b.x == x && b.y == y && b.z ==z } ) !== undefined;
-	}
-
-	this.getFaces = function() {
-		var faces = []
-		for( var i = 0; i < directions.length; i++ ) {
-			 if( i == 3 || // bottom
-			 	this.getVoxel( this.x + directions[i][0], this.y + directions[i][1], this.z + directions[i][2]) ) {
-				faces.push(null);
-			 } else {
-			 	faces.push( materialArray[i] );
-			 }
-		}
-		return faces;
-	}
-
-	this.display = function() {
-		// the solid block
-		var blockBox = new THREE.BoxBufferGeometry(blockSize, blockSize, blockSize); // width, height, depth
-
-		this.mesh = new THREE.Mesh(blockBox, this.getFaces() );
-		//var blockMesh = new THREE.MeshBasicMaterial({color: 0x003300});
-		 //this.mesh = new THREE.Mesh(blockBox, materialArray);
-		scene.add(this.mesh);
-		this.mesh.position.x = this.x;
-		this.mesh.position.y = this.y - playerHeight;
-		this.mesh.position.z = this.z;
-
-		// the wireframe around it
-		var edges = new THREE.EdgesGeometry(blockBox);
-		this.line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: 0xffffff}) );
-		scene.add(this.line);
-		this.line.position.x = this.x;
-		this.line.position.y = this.y - playerHeight;
-		this.line.position.z = this.z;
-
-	}
 }
 
 // var axesHelper = new THREE.AxesHelper( 5 );
@@ -100,7 +50,6 @@ function Block(x, y, z) {
 
 //construct blocks
 var blocks = [];
-
 
 
 camera.position.x = 0;
@@ -118,38 +67,29 @@ function getBlock(x, z) {
 	return new Block(x * blockSize, v, z * blockSize);
 }
 
-function generate() {
-	xblockpos = camera.position.x / 5
-	zblockpos = camera.position.z / 5
-	var chunkSize = 20;
-
-	minx = xblockpos - chunkSize;
-	maxx = xblockpos + chunkSize;
-	minz = zblockpos - chunkSize;	
-	maxz = zblockpos + chunkSize;
-	for(var x = minx; x < maxx; x++) {
-		for(var z = minz; z < maxz; z++) {
-			blocks.push( getBlock(x, z) );
-		}
-	}
-
-	for( var i =0; i < blocks.length; i++) {
-		blocks[i].display();
-	}
+var instancedChunk = undefined;
+function generateInstancedChunk() {
+	var blockBox = new THREE.BoxGeometry(5, 5, 5);
+	instancedChunk = new THREE.InstancedMesh(blockBox, materialArray, blocks.length)
+	for(var count=0; count < blocks.length; count++) {
+		var b = blocks[count];
+		let matrix = new THREE.Matrix4().makeTranslation( b.x, b.y, b.z );
+		instancedChunk.setMatrixAt(count, matrix);
+	}			
+	scene.add(instancedChunk);
 }
 
-var chunkSize = 20;
+function generate() {
+	updateBlocks(true);
+}
+
+var chunkSize = 100;
 function blockOutOfSight(b) {
 	return Math.abs(b.x-camera.position.x) > (chunkSize+2)*blockSize ||
 		 Math.abs(b.z-camera.position.z) > (chunkSize+2)*blockSize
 }
 
-function removeBlockFromScene(b) {
-	scene.remove(b.mesh);
-	scene.remove(b.line);
-}
-
-function updateBlocks() {
+function updateBlocks(doNew) {
 	var xoff = 0;
 	var zoff = 0;
 	var inc = 0.05;
@@ -162,68 +102,28 @@ function updateBlocks() {
 	var maxx2 = xblockpos + chunkSize;
 	var minz2 = zblockpos - chunkSize;
 	var maxz2 = zblockpos + chunkSize;
-	if( minx2 == minx && minz == minz2) return;
+	if( !doNew && Math.abs(minx2-minx) < 5 && Math.abs(minz-minz2) < 5) return;
 
 	for(var x = minx2; x < maxx2; x++) {
 		for(var z = minz2; z < maxz2; z++) {
 			if( x >= minx && x < maxx && z >= minz && z < maxz) continue;
 			var b = getBlock(x, z);
 			blocks.push(b);
-			b.display();
 		}
 	}
 
-	blocks.filter(blockOutOfSight).forEach( removeBlockFromScene );
 	blocks = blocks.filter( b => !blockOutOfSight(b));
 
 	minx = minx2;
 	minz = minz2;
 	maxx = maxx2;
 	maxz = maxz2;
+
+	if(instancedChunk) scene.remove(instancedChunk);
+	generateInstancedChunk();
 }
 
 generate();
-// for(var x = -D; x < D; x++) {
-// 	xoff = 0;
-// 	for(var z = -D; z < D; z++) {
-// 		var v = Math.round(noise.perlin2(xoff, zoff) * amplitude / 5) *5;
-// 		//v = v - 20;
-
-// 		blocks.push( new Block(x * blockSize, v, z * blockSize) );
-// 		xoff = xoff + inc;
-// 	}
-// 	zoff = zoff + inc;
-// }
-
-
-// camera.position.y = 50;
-
-// var chunks = [];
-// var xoff = 0;
-// var zoff = 0;
-// var inc = 0.05;
-// var amplitude = 30 + (Math.random() * 70);
-// var renderDistance = 3;
-// var chunkSize = 10;
-
-
-// for(var i =0; i < renderDistance; i++) {
-// 	var chunk = [];
-// 	for(var j =0; j < renderDistance; j++) {
-// 		for(var x = xblockpos -chunkSize; x < xblockpos +chunkSize; x++) {
-// 			for(var z = zblockpos -chunkSize; z < zblockpos +chunkSize; z++) {
-// 				xoff = inc*x;
-// 				zoff = inc*z;
-// 				var v = Math.round(noise.perlin2(xoff, zoff) * amplitude / 5) *5;
-// 				chunk.push(new Block(x * blockSize, v, z * blockSize) );
-// 			}
-// 		}
-// 	}
-// 	chunks.push(chunk);
-// }
-
-
-
 
 // camera control
 var controls = new THREE.PointerLockControls(camera, document.body);
@@ -296,15 +196,15 @@ function update() {
 	camera.position.y = camera.position.y - ySpeed;
 	ySpeed += gravity;
 
-	var hitblock = blocks.find( b => blockSameXZ(b) && camera.position.y < b.y );
+	var hitblock = blocks.find( b => blockSameXZ(b) && camera.position.y < b.y+playerHeight );
 	if( hitblock !== undefined) {
-		camera.position.y = hitblock.y;
+		camera.position.y = hitblock.y + playerHeight;
 		ySpeed = 0;
 		// we hit the ground
 		canJump = true;
 	}
 
-	 updateBlocks();
+	 updateBlocks(false);
 }
 
 // Resize Window listener for resetting camera
