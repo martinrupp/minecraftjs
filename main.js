@@ -214,9 +214,75 @@ window.addEventListener("resize", function() {
 	camera.updateProjectionMatrix();
 });
 
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+// this could be the mouse pos, but for MC, the ray is always in the middle of the screen
+pointer.x = (0.5) * 2 - 1;
+pointer.y = -1 *0.5 * 2 + 1;
+
+var plane;
+
+function raycasting() {
+	raycaster.setFromCamera(pointer, camera);
+	var intersection = raycaster.intersectObject(instancedChunk);
+	if( intersection[0] != undefined && intersection[0].distance < 40) {
+		console.log(intersection[0]);
+		if( !scene.children.includes(plane) )
+		{
+			var planeG = new THREE.PlaneGeometry(5, 5);
+			var planeM = new THREE.MeshBasicMaterial({color : 0xffffff, side: THREE.DoubleSide});
+			planeM.transparent = true;
+			planeM.opacity = 0.5;
+			plane = new THREE.Mesh(planeG, planeM);
+			scene.add(plane);
+		} 
+		else {
+			plane.visible = true;
+			var materialIndex = intersection[0].face.materialIndex;
+			var position = intersection[0].point;
+			const inc = 0.1;
+			plane.rotation.x = 0;
+			plane.rotation.y = 0;
+			plane.rotation.z = 0;
+			plane.position.x = Math.round(position.x/5)*5;
+			plane.position.y = Math.round(position.y/5)*5;
+			plane.position.z = Math.round(position.z/5)*5;
+			switch(materialIndex) {
+				case 0: // right
+					plane.rotation.y = Math.PI/2;
+					plane.position.x = position.x + inc;
+					break;
+				case 1: // left
+					plane.rotation.y = Math.PI/2;
+					plane.position.x = position.x - inc;
+					break;
+				case 2: // top
+					plane.rotation.x = Math.PI/2;
+					plane.position.y = position.y + inc;
+					break;
+				case 3: // bottom
+					plane.rotation.x = Math.PI/2;
+					plane.position.y = position.y - inc;
+					break;
+				case 4: // front
+					plane.position.z = position.z + inc;					
+					break;
+				case 5: // back
+					plane.position.z = position.z - inc;
+					break;
+			}
+		}
+	}
+	else {
+		if(plane) {
+			plane.visible = false;
+		}
+	}
+}
 
 // game render/drawing function
 function render() {
+	raycasting();
 	renderer.render(scene, camera);
 }
 
