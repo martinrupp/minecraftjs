@@ -143,7 +143,7 @@ var keys = []
 var canJump = true;
 document.addEventListener("keydown", function(e) {
 	keys.push(e.key);
-	if(e.key == " " && canJump) {
+	if(e.key == controlOptions.jump && canJump) {
 		ySpeed = -1.3;		
 		canJump = false;
 	}
@@ -170,24 +170,32 @@ function collidedWithBlock() {
 var movingSpeed = .7;
 var ySpeed = 0;
 var gravity = 0.08;
+
+var controlOptions = {
+	forward: "w",
+	backward: "s",
+	right: "d",
+	left: "a",
+	jump: " " // space
+}
 function update() {
-	if(keys.includes("w")) {		
+	if(keys.includes(controlOptions.forward)) {		
 		controls.moveForward(movingSpeed);
 		if( !autoJump && collidedWithBlock() )
 		 	controls.moveForward(-movingSpeed);
 			
 	}
-	if(keys.includes("a")) {
+	if(keys.includes(controlOptions.left)) {
 		controls.moveRight(-movingSpeed);
 		if( !autoJump && collidedWithBlock() )
 		 	controls.moveRight(movingSpeed);
 	}
-	if(keys.includes("s")) {
+	if(keys.includes(controlOptions.backward)) {
 		controls.moveForward(-movingSpeed);
 		if( !autoJump && collidedWithBlock() )
 		 	controls.moveForward(movingSpeed);
 	}
-	if(keys.includes("d")) {
+	if(keys.includes(controlOptions.right)) {
 		controls.moveRight(movingSpeed);
 		if( !autoJump && collidedWithBlock() )
 		 	controls.moveRight(-movingSpeed);
