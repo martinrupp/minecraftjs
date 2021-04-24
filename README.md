@@ -7,6 +7,8 @@ This will be a redo of the awesome https://github.com/HritikRC/Minecraft from th
 - Part 8 Stats, Removing Unwanted Faces https://www.youtube.com/watch?v=k4jHSMbaAlU&t=1s
 - Part 9 Smooth Game Performance https://www.youtube.com/watch?v=OLhPYRsFGLE
 - Part 11 Raycasting https://www.youtube.com/watch?v=pGKoxNUcKrE
+- Part 12 Placing Blocks https://www.youtube.com/watch?v=SqKlhNkuNTw
+- Part 13 Breaking Blocks https://www.youtube.com/watch?v=6Csaky7gQ-Y&
 
 external Resources:
 - THREE.JS from https://github.com/mrdoob/three.js/blob/master/build/three.js

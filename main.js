@@ -69,6 +69,7 @@ function getBlock(x, z) {
 
 var instancedChunk = undefined;
 function generateInstancedChunk() {
+	if(instancedChunk) scene.remove(instancedChunk);
 	var blockBox = new THREE.BoxGeometry(5, 5, 5);
 	instancedChunk = new THREE.InstancedMesh(blockBox, materialArray, blocks.length)
 	for(var count=0; count < blocks.length; count++) {
@@ -84,6 +85,7 @@ function generate() {
 }
 
 var chunkSize = 100;
+//var chunkSize = 3;
 function blockOutOfSight(b) {
 	return Math.abs(b.x-camera.position.x) > (chunkSize+2)*blockSize ||
 		 Math.abs(b.z-camera.position.z) > (chunkSize+2)*blockSize
@@ -119,7 +121,6 @@ function updateBlocks(doNew) {
 	maxx = maxx2;
 	maxz = maxz2;
 
-	if(instancedChunk) scene.remove(instancedChunk);
 	generateInstancedChunk();
 }
 
@@ -129,7 +130,17 @@ generate();
 var controls = new THREE.PointerLockControls(camera, document.body);
 document.body.addEventListener("click", function() {
 	controls.lock();
+	if(controls.isLocked) {
+		destroyBlock();
+	}
 });
+
+// not working correctly yet
+document.body.addEventListener('contextmenu', e => {
+  placeBlock();
+  e.preventDefault();
+});
+
 
 controls.addEventListener("lock", function() {
 
@@ -138,15 +149,103 @@ controls.addEventListener("lock", function() {
 controls.addEventListener("unlock", function() {
 });
 
+
 // keyboard control
 var keys = []
 var canJump = true;
-document.addEventListener("keydown", function(e) {
-	keys.push(e.key);
-	if(e.key == controlOptions.jump && canJump) {
-		ySpeed = -1.3;		
+var placedBlocks = [];
+
+function jump() {
+	if(canJump) {
+		ySpeed = -1.3;
 		canJump = false;
 	}
+}
+
+function getRaycastIntersection() {
+	const raycaster = new THREE.Raycaster();
+	const pointer = new THREE.Vector2();
+	// this could be the mouse pos, but for MC, the ray is always in the middle of the screen
+	pointer.x = (0.5) * 2 - 1;
+	pointer.y = -1 *0.5 * 2 + 1;
+
+	raycaster.setFromCamera(pointer, camera);
+	return raycaster.intersectObject(instancedChunk);
+}
+
+function getRaycastBlockInc(inc) {
+	var intersection = getRaycastIntersection();
+	if( intersection[0] === undefined || intersection[0].distance >= 40) 
+		return undefined;
+	plane.visible = true;
+	var materialIndex = intersection[0].face.materialIndex;
+	var position = intersection[0].point;
+	var x = Math.round(position.x/blockSize)*blockSize;
+	var y = Math.round(position.y/blockSize)*blockSize;
+	var z = Math.round(position.z/blockSize)*blockSize;
+	switch(materialIndex) {
+		case 0: // right
+			x = position.x + inc;
+			break;
+		case 1: // left
+			x = position.x - inc;
+			break;
+		case 2: // top
+			y = position.y + inc;
+			break;
+		case 3: // bottom
+			y = position.y - inc;
+			break;
+		case 4: // front
+			z = position.z + inc;					
+			break;
+		case 5: // back
+			z = position.z - inc;
+			break;
+	}
+	x = x | 0;
+	y = y | 0;
+	z = z | 0;
+	return {x:x, y:y, z:z}
+}
+
+function getRaycastBlockAdjacent() {
+	return getRaycastBlockInc(-blockSize/2);
+}
+
+function getRaycastBlock() {
+	return getRaycastBlockInc(+blockSize/2);
+}
+
+function destroyBlock() {
+	var r = getRaycastBlockAdjacent();
+	if(r === undefined) return;
+	blocks = blocks.filter( 
+		b => { return b.x != r.x || b.y != r.y || b.z != r.z; } );
+	generateInstancedChunk();
+
+
+}
+
+function placeBlock() {
+	var r = getRaycastBlock();
+	if(r === undefined) return;
+	var b = new Block(r.x, r.y, r.z);
+	placedBlocks.push(b);
+	blocks.push(b);
+	console.log("placing " + b.x + ", " + b.y + ", " + b.z)
+	generateInstancedChunk();
+}
+
+document.addEventListener("keydown", function(e) {
+	keys.push(e.key);
+	if(e.key == controlOptions.jump) {
+		jump();
+	}
+	else if(e.key == controlOptions.placeBlock) {
+		placeBlock();
+	}
+
 });
 
 document.addEventListener("keyup", function(e) {
@@ -176,7 +275,8 @@ var controlOptions = {
 	backward: "s",
 	right: "d",
 	left: "a",
-	jump: " " // space
+	jump: " ", // space
+	placeBlock: "q"
 }
 function update() {
 	if(keys.includes(controlOptions.forward)) {		
@@ -222,19 +322,12 @@ window.addEventListener("resize", function() {
 	camera.updateProjectionMatrix();
 });
 
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
-// this could be the mouse pos, but for MC, the ray is always in the middle of the screen
-pointer.x = (0.5) * 2 - 1;
-pointer.y = -1 *0.5 * 2 + 1;
-
 var plane;
 
 function raycasting() {
-	raycaster.setFromCamera(pointer, camera);
-	var intersection = raycaster.intersectObject(instancedChunk);
+	var intersection = getRaycastIntersection();
 	if( intersection[0] != undefined && intersection[0].distance < 40) {
-		console.log(intersection[0]);
+		//console.log(intersection[0]);
 		if( !scene.children.includes(plane) )
 		{
 			var planeG = new THREE.PlaneGeometry(5, 5);
