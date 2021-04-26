@@ -11,30 +11,41 @@ document.body.appendChild(stats.dom);
 // setup scene and renderer
 var scene = new THREE.Scene();
 // background
-scene.background = new THREE.Color(0x00ffff);
+//scene.background = new THREE.Color(0x00ffff);
 // fog
-scene.fog = new THREE.Fog(0x555555, 10, 300);
+//scene.fog = new THREE.Fog(0x555555, 10, 300);
 var renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+
+// https://threejsfundamentals.org/threejs/lessons/threejs-lights.html
+addSky(scene);
+
+var geometry, geometryLastPos;
 
 // setup camera
 var FOV = 75; // field of view (in degrees)
 var near = 0.1; // near clipping plane
 var far = 1000; // far clipping plane
+far = 2000000;
 var aspectRatio = window.innerWidth / window.innerHeight;
 var camera = new THREE.PerspectiveCamera(FOV, aspectRatio, near, far);
 var blockSize = 5;
 
 
 var loader = new THREE.TextureLoader();
+
+var sideTexture = new THREE.MeshStandardMaterial({map : loader.load("texture/side.jpg")});
+var topTexture = new THREE.MeshStandardMaterial({map : loader.load("texture/top.jpg")});
+var bottomTexture = new THREE.MeshStandardMaterial({map : loader.load("texture/bottom.jpg")});
+
 let materialArray = [
-	new THREE.MeshBasicMaterial({map : loader.load("texture/side4.jpg")}),
-	new THREE.MeshBasicMaterial({map : loader.load("texture/side1.jpg")}),
-	new THREE.MeshBasicMaterial({map : loader.load("texture/top.jpg")}),
-	new THREE.MeshBasicMaterial({map : loader.load("texture/bottom.jpg")}),
-	new THREE.MeshBasicMaterial({map : loader.load("texture/side2.jpg")}),
-	new THREE.MeshBasicMaterial({map : loader.load("texture/side3.jpg")})
+	sideTexture,
+	sideTexture,
+	topTexture,
+	bottomTexture,
+	sideTexture,
+	sideTexture
 ];
 
 var playerHeight = 15;
@@ -261,6 +272,12 @@ function blockSameXZ(b) {
 	return camera.position.x <= b.x + blockSize/2 && camera.position.x >= b.x - blockSize/2 &&
 		camera.position.z <= b.z +blockSize/2 && camera.position.z >= b.z - blockSize/2;
 }
+function blockSameXYZ(b) {
+	return camera.position.x <= b.x + blockSize/2 && camera.position.x >= b.x - blockSize/2 &&
+		camera.position.y - playerHeight <= b.y +blockSize/2 && camera.position.y - playerHeight >= b.y - blockSize/2
+		&& camera.position.z <= b.z +blockSize/2 && camera.position.z >= b.z - blockSize/2;
+}
+
 function collidedWithBlock() {
 	return blocks.find( b => { return blockSameXZ(b) && camera.position.y == b.y - blockSize; } ) !== undefined;
 }
@@ -301,18 +318,20 @@ function update() {
 		 	controls.moveRight(-movingSpeed);
 	}
 
-	camera.position.y = camera.position.y - ySpeed;
-	ySpeed += gravity;
-
-	var hitblock = blocks.find( b => blockSameXZ(b) && camera.position.y < b.y+playerHeight );
-	if( hitblock !== undefined) {
-		camera.position.y = hitblock.y + playerHeight;
+	var hitblock = blocks.find( b => blockSameXYZ(b) );
+	if( ySpeed >= 0 && hitblock !== undefined) {
+		camera.position.y = hitblock.y + blockSize/2 + playerHeight;
 		ySpeed = 0;
 		// we hit the ground
 		canJump = true;
 	}
+	else
+	{
+		camera.position.y = camera.position.y - ySpeed;
+		ySpeed += gravity;
+	}
 
-	 updateBlocks(false);
+	updateBlocks(false);
 }
 
 // Resize Window listener for resetting camera
@@ -384,6 +403,8 @@ function raycasting() {
 // game render/drawing function
 function render() {
 	raycasting();
+	skyParameters.inclination += 0.001;
+	updateParameters(skyParameters);
 	renderer.render(scene, camera);
 }
 

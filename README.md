@@ -15,3 +15,5 @@ external Resources:
 - perlin.js from https://github.com/josephg/noisejs/blob/master/perlin.js
 - PointerLockControls.js - https://github.com/mrdoob/three.js/blob/dev/examples/js/controls/PointerLockControls.js
 - Stats.js https://github.com/mrdoob/stats.js/blob/master/src/Stats.js
+- sky shader https://github.com/takahirox/takahirox.github.io/blob/master/three.js.mmdeditor/examples/js/SkyShader.js
+- https://github.com/takahirox/takahirox.github.io/blob/master/three.js.mmdeditor/examples/webgl_shaders_sky.html
