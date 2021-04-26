@@ -18,11 +18,6 @@ var renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// https://threejsfundamentals.org/threejs/lessons/threejs-lights.html
-addSky(scene);
-
-var geometry, geometryLastPos;
-
 // setup camera
 var FOV = 75; // field of view (in degrees)
 var near = 0.1; // near clipping plane
@@ -31,7 +26,6 @@ far = 2000000;
 var aspectRatio = window.innerWidth / window.innerHeight;
 var camera = new THREE.PerspectiveCamera(FOV, aspectRatio, near, far);
 var blockSize = 5;
-
 
 var loader = new THREE.TextureLoader();
 
@@ -47,6 +41,10 @@ let materialArray = [
 	sideTexture,
 	sideTexture
 ];
+
+addSky(scene);
+addNight(scene);
+
 
 var playerHeight = 15;
 // a block
@@ -405,6 +403,7 @@ function render() {
 	raycasting();
 	skyParameters.inclination += 0.001;
 	updateParameters(skyParameters);
+	updateNight();
 	renderer.render(scene, camera);
 }
 
