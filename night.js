@@ -1,83 +1,81 @@
-var geometry, geometryLastPos;
+var starsGeometry;
+// currently the only way i found to make fixed stars is to move them with the player
+// this is keeping track of how much we moved
+var starsGeometryLastPos;
 
+// basically a set of PointMaterial with color 1, 1, 1,
+// spread randomly with a minimum distance of 100'000 from the player
 function addNight() {
-	var particles = 500;
+	var numStars = 500;
 
-	geometry = new THREE.BufferGeometry();
+	starsGeometry = new THREE.BufferGeometry();
 
-	var positions = new Float32Array( particles * 3 );
-	var colors = new Float32Array( particles * 3 );
+	var positions = new Float32Array( numStars * 3 );
+	var colors = new Float32Array( numStars * 3 );
 
-	var color = new THREE.Color();
-
-	var n = 1000, n2 = n / 2; // particles spread in the cube
+	var n = 1000, n2 = n / 2;
 
 	for ( var i = 0; i < positions.length; i += 3 ) {
 
 		// positions
 		var x=0, y=0, z=0;
 
+		// todo: obviously there's a better way to do this
 		while(x*x+y*y+z*z < 100000) {
 			var x = Math.random() * n - n2;
 			var y = Math.random() * n;
 			var z = Math.random() * n - n2;
 		}
 
-
 		positions[ i ]     = x;
 		positions[ i + 1 ] = y;
 		positions[ i + 2 ] = z;
 
-		// colors
-
-		var vx = 1;
-		var vy = 1;
-		var vz = 1;
-
-		color.setRGB( vx, vy, vz );
-
-		colors[ i ]     = color.r;
-		colors[ i + 1 ] = color.g;
-		colors[ i + 2 ] = color.b;
+		colors[ i ]     = 1;
+		colors[ i + 1 ] = 1;
+		colors[ i + 2 ] = 1;
 
 	}
 
-	geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
-	geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
+	starsGeometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
+	starsGeometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
 
-	geometry.computeBoundingSphere();
-
-	//
+	starsGeometry.computeBoundingSphere();
 
 	var material = new THREE.PointsMaterial( { size: 1, vertexColors: THREE.VertexColors } );
 
-	points = new THREE.Points( geometry, material );
+	points = new THREE.Points( starsGeometry, material );
 	scene.add( points );
-	geometryLastPos = {x:camera.position.x, y:camera.position.y, z:camera.position.z};
+	starsGeometryLastPos = {x:camera.position.x, y:camera.position.y, z:camera.position.z};
 }
 
 
 function updateNight() {
-	var arr = geometry.attributes.position.array;
+	// at day, don't show any stars
+	// at night, max. number of stars at midnight
+		
+	var fromNoon = Math.abs(skyParameters.inclination)/0.5;	
+	if(fromNoon < 1) {
+		starsGeometry.setDrawRange( 0, 0 );
+		return; // day, don't update stars pos
+	}
+
+	var night = fromNoon-1; // 0: beginning, 1: midnight
+	var arr = starsGeometry.attributes.position.array;
+	starsGeometry.setDrawRange( 0, night*arr.length );
+
+	// move stars with player so player doesn't run "into" stars
 	for( var i = 0; i<arr.length; i+=3)
 	{
-		arr[i+0] += camera.position.x-geometryLastPos.x;
-		arr[i+1] += camera.position.y-geometryLastPos.y;
-		arr[i+2] += camera.position.z-geometryLastPos.z;
+		arr[i+0] += camera.position.x-starsGeometryLastPos.x;
+		arr[i+1] += camera.position.y-starsGeometryLastPos.y;
+		arr[i+2] += camera.position.z-starsGeometryLastPos.z;
 	}
-	arr = geometry.attributes.color.array;
-	var fromNoon = Math.abs(skyParameters.inclination);
+	arr = starsGeometry.attributes.color.array;	
 	
-		// night is 0.5-1
-		// noon i 0
-		// undergang 0.5 // 0
-		// nacht 1. // 0.5
-	var night = (fromNoon-0.5)/0.5;
-	if(fromNoon < 0.5)
-		geometry.setDrawRange( 0, 0 );
-	else
-		geometry.setDrawRange( 0, night*arr.length );
 
-	geometry.attributes.position.needsUpdate =true;
-	geometryLastPos = {x:camera.position.x, y:camera.position.y, z:camera.position.z};
+	// important, otherwise positions won't be updated
+	starsGeometry.attributes.position.needsUpdate =true;
+	// safe that we update the positions so far
+	starsGeometryLastPos = {x:camera.position.x, y:camera.position.y, z:camera.position.z};
 }

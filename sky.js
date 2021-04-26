@@ -6,7 +6,11 @@ var skyParameters  = {
 	mieCoefficient: 0.005,
 	mieDirectionalG: 0.8,
 	luminance: 1,
-	inclination: 0, //0.25, //-0.5 to 0.5. 0 = noon
+
+	// noon i 0, day is -0.5 - 0.5
+	// night is +/- 0.5-1
+	// dawn is +/- 0.5
+	inclination: 0,
 	azimuth: 0.25, // Facing front,
 	sun: true,
 	distance: 400000
@@ -27,28 +31,30 @@ function updateParameters(parameters) {
 	uniforms.mieDirectionalG.value = parameters.mieDirectionalG;
 
 	var theta = Math.PI * ( parameters.inclination - 0.5 );
-	//console.log(theta + " " + Math.abs(parameters.inclination-0.5) );
 	var phi = 2 * Math.PI * ( parameters.azimuth - 0.5 );
 
+	// position the sun
 	sunSphere.position.x = skyParameters.distance * Math.cos( phi );
 	sunSphere.position.y = skyParameters.distance * Math.sin( phi ) * Math.sin( theta );
 	sunSphere.position.z = skyParameters.distance * Math.sin( phi ) * Math.cos( theta );
-
-	//console.log(Math.sin( theta ));
-
 	sunSphere.visible = parameters.sun;
 
 	sky.uniforms.sunPosition.value.copy( sunSphere.position );
-	fromNoon = Math.abs(parameters.inclination)/0.5; // 0-0.5
+
+		
+	// noon i 0, day is 0..1, night is 1-2
+	fromNoon = Math.abs(parameters.inclination)/0.5;
 
 	if( fromNoon > 1) {
+		// night: no directional light
 		directionalLight.intensity = 0;
 		sunLight.intensity = 0.3;
 	}
 	else {
+		// day
 		sunLight.intensity = 0.2*(1-fromNoon) + 0.3;
 		var x=1;
-		if(fromNoon > 0.9)
+		if(fromNoon > 0.9) // this is for the dawn so light doesn't go out abruptly
 			x=(1-fromNoon)/0.1;
 		directionalLight.intensity = 0.5*(1-fromNoon) + 0.2*x;
 		var red = (1-fromNoon)*0.9+0.1;
