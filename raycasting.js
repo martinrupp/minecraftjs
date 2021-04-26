@@ -11,9 +11,9 @@ function getRaycastIntersection(instancedChunks) {
 	var minIntersect = undefined;
 	for( var i = 0; i < instancedChunks.length; i++) {
 		var intersect = raycaster.intersectObject(instancedChunks[i]);
-		if( (minIntersect === undefined || minIntersect[0] == undefined)
-			|| (intersect[0] !== undefined && minIntersect[0].distance > intersect[0].distance) ) {
-				minIntersect = intersect;
+		if( (minIntersect === undefined)
+			|| (intersect[0] !== undefined && minIntersect.distance > intersect[0].distance) ) {
+				minIntersect = intersect[0];
 		}
 	}
 	return minIntersect;
@@ -21,11 +21,11 @@ function getRaycastIntersection(instancedChunks) {
 
 function getRaycastBlockInc(instancedChunks, inc) {
 	var intersection = getRaycastIntersection(instancedChunks);
-	if( intersection[0] === undefined || intersection[0].distance >= 40) 
+	if( intersection === undefined || intersection.distance >= 40) 
 		return undefined;
 	plane.visible = true;
-	var materialIndex = intersection[0].face.materialIndex;
-	var position = intersection[0].point;
+	var materialIndex = intersection.face.materialIndex;
+	var position = intersection.point;
 	var x = Math.round(position.x/blockSize)*blockSize;
 	var y = Math.round(position.y/blockSize)*blockSize;
 	var z = Math.round(position.z/blockSize)*blockSize;
@@ -56,7 +56,7 @@ function getRaycastBlockInc(instancedChunks, inc) {
 }
 
 function getRaycastBlockAdjacent(instancedChunks) {
-	return getRaycastBlockInc(-blockSize/2);
+	return getRaycastBlockInc(instancedChunks, -blockSize/2);
 }
 
 function getRaycastBlock(instancedChunks) {
@@ -68,7 +68,7 @@ var plane;
 
 function raycasting(instancedChunks) {
 	var intersection = getRaycastIntersection(instancedChunks);
-	if( intersection[0] != undefined && intersection[0].distance < 40) {
+	if( intersection != undefined && intersection.distance < 40) {
 		//console.log(intersection[0]);
 		if( !scene.children.includes(plane) )
 		{
@@ -81,8 +81,8 @@ function raycasting(instancedChunks) {
 		} 
 		else {
 			plane.visible = true;
-			var materialIndex = intersection[0].face.materialIndex;
-			var position = intersection[0].point;
+			var materialIndex = intersection.face.materialIndex;
+			var position = intersection.point;
 			const inc = 0.1;
 			plane.rotation.x = 0;
 			plane.rotation.y = 0;

@@ -18,6 +18,11 @@ var renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+// shadow
+    // renderer.shadowMap.enabled = true;
+    // renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+
+
 // setup camera
 var FOV = 75; // field of view (in degrees)
 var near = 0.1; // near clipping plane
@@ -46,16 +51,17 @@ let grasMatArr = [
 // cobbleStone
 var cobblestoneTexture = new THREE.MeshStandardMaterial({map : loader.load("texture/cobblestone2.png"), roughness: 0.2});
 //refractionRatio: 0.4, reflectivity: 0.6,transparent : true,opacity : 0.5});
-let cobblestoneMatArr = [
-	cobblestoneTexture,
-	cobblestoneTexture,
-	cobblestoneTexture,
-	cobblestoneTexture,
-	cobblestoneTexture,
-	cobblestoneTexture
-];
+let cobblestoneMatArr = Array(6).fill( cobblestoneTexture );
 
 
+let woodMatArr = Array(6).fill( new THREE.MeshStandardMaterial({map : loader.load("texture/wood.png")}) );
+let goldMatArr = Array(6).fill( new THREE.MeshStandardMaterial({map : loader.load("texture/gold.png"), roughness: 0.2, reflectivity: 0.9,
+	emissive: new THREE.Color( 'yellow' ) }) );
+let glasMatArr = Array(6).fill( new THREE.MeshStandardMaterial({map : loader.load("texture/gold.png"), roughness: 0.2, 
+	refractionRatio: 0.4, reflectivity: 0.6,transparent : true,opacity : 0.5 } ) );
+
+
+//createShadow(scene);
 addSky(scene);
 addNight(scene);
 
@@ -77,6 +83,12 @@ var blocks = [];
 
 const ID_GRAS = 0;
 const ID_COBBLESTONE = 1;
+const ID_LIGHT = 2;
+const ID_WOOD = 3;
+const ID_GLAS = 4;
+
+const blockTypes = [ID_GRAS, ID_COBBLESTONE, ID_LIGHT, ID_WOOD, ID_GLAS];
+const materialArrays = [ grasMatArr, cobblestoneMatArr, goldMatArr, woodMatArr, glasMatArr ];
 
 camera.position.x = 0;
 camera.position.y = 0;
@@ -94,6 +106,7 @@ function getBlock(x, z) {
 }
 
 function addInstancedChunk(material, blocksArr) {
+	if(blocksArr === undefined || blocksArr.length == 0) return;
 	var blockBox = new THREE.BoxGeometry(5, 5, 5);
 	var chunk = new THREE.InstancedMesh(blockBox, material, blocksArr.length)
 	for(var count=0; count < blocksArr.length; count++) {
@@ -101,6 +114,7 @@ function addInstancedChunk(material, blocksArr) {
 		let matrix = new THREE.Matrix4().makeTranslation( b.x, b.y, b.z );
 		chunk.setMatrixAt(count, matrix);
 	}
+	//addShadow(chunk);
 	instancedChunks.push(chunk);
 	scene.add(chunk);
 }
@@ -112,8 +126,9 @@ function generateInstancedChunk() {
 		instancedChunks.forEach( c => scene.remove(c) );
 	}
 	instancedChunks = [];
-	addInstancedChunk(grasMatArr, blocks.filter(b => b.type == ID_GRAS));
-	addInstancedChunk(cobblestoneMatArr, blocks.filter(b => b.type == ID_COBBLESTONE));
+	for( var i = 0; i < blockTypes.length; i++ ) {
+		addInstancedChunk(materialArrays[i], blocks.filter(b => b.type == blockTypes[i]));
+	}
 }
 
 function generate() {
@@ -201,17 +216,30 @@ function jump() {
 function destroyBlock() {
 	var r = getRaycastBlockAdjacent(instancedChunks);
 	if(r === undefined) return;
+	f = blocks.filter( b => { return b.x == r.x && b.y == r.y && b.z == r.z; } );
+	if(f !== undefined && f.length != 0 && f[0].light)
+		scene.remove(f[0].light);
 	blocks = blocks.filter( 
 		b => { return b.x != r.x || b.y != r.y || b.z != r.z; } );
 	generateInstancedChunk();
-
-
 }
 
-function placeBlock() {
+function addPointLight(scene, x, y, z) {
+    var light2 = new THREE.PointLight(0xff4040, 1.0, 200, 0.5);
+    light2.position.set(x, y, z);
+    scene.add(light2);
+    return light2;
+}
+
+function placeBlock(type) {
 	var r = getRaycastBlock(instancedChunks);
 	if(r === undefined) return;
-	var b = new Block(r.x, r.y, r.z, ID_COBBLESTONE);
+	var b = new Block(r.x, r.y, r.z, type.id);
+	if(type.light)
+		b.light = addPointLight(scene, r.x, r.y, r.z);
+	else
+		b.light = undefined;
+	
 	placedBlocks.push(b);
 	blocks.push(b);
 	console.log("placing " + b.x + ", " + b.y + ", " + b.z)
@@ -223,8 +251,23 @@ document.addEventListener("keydown", function(e) {
 	if(e.key == controlOptions.jump) {
 		jump();
 	}
-	else if(e.key == controlOptions.placeBlock) {
-		placeBlock();
+	else if(e.key == "1") {
+		placeBlock({id:ID_COBBLESTONE, light:false});
+	}
+	else if(e.key == "2") {
+		placeBlock({id:ID_GRAS, light:false});
+	}
+	else if(e.key == "3") {
+		placeBlock({id:ID_LIGHT, light:true});
+	}
+	else if(e.key == "4") {
+		placeBlock({id:ID_WOOD, light:false});
+	}
+	else if(e.key == "5") {
+		placeBlock({id:ID_GLAS, light:false});
+	}
+	else if(e.key == "e") {
+		destroyBlock();
 	}
 
 });
@@ -256,6 +299,7 @@ function collidedWithBlock() {
 var movingSpeed = .7;
 var ySpeed = 0;
 var gravity = 0.08;
+// var gravity = 0.0;
 
 var controlOptions = {
 	forward: "w",
