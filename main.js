@@ -29,18 +29,32 @@ var blockSize = 5;
 
 var loader = new THREE.TextureLoader();
 
-var sideTexture = new THREE.MeshStandardMaterial({map : loader.load("texture/side.jpg")});
-var topTexture = new THREE.MeshStandardMaterial({map : loader.load("texture/top.jpg")});
-var bottomTexture = new THREE.MeshStandardMaterial({map : loader.load("texture/bottom.jpg")});
+// gras
+var grasSideTexture = new THREE.MeshStandardMaterial({map : loader.load("texture/side.jpg")});
+var grasTopTexture = new THREE.MeshStandardMaterial({map : loader.load("texture/top.jpg")});
+var grasBottomTexture = new THREE.MeshStandardMaterial({map : loader.load("texture/bottom.jpg")});
 
-let materialArray = [
-	sideTexture,
-	sideTexture,
-	topTexture,
-	bottomTexture,
-	sideTexture,
-	sideTexture
+let grasMatArr = [
+	grasSideTexture,
+	grasSideTexture,
+	grasTopTexture,
+	grasBottomTexture,
+	grasSideTexture,
+	grasSideTexture
 ];
+
+// cobbleStone
+var cobblestoneTexture = new THREE.MeshStandardMaterial({map : loader.load("texture/cobblestone2.png"), roughness: 0.2});
+//refractionRatio: 0.4, reflectivity: 0.6,transparent : true,opacity : 0.5});
+let cobblestoneMatArr = [
+	cobblestoneTexture,
+	cobblestoneTexture,
+	cobblestoneTexture,
+	cobblestoneTexture,
+	cobblestoneTexture,
+	cobblestoneTexture
+];
+
 
 addSky(scene);
 addNight(scene);
@@ -48,10 +62,11 @@ addNight(scene);
 
 var playerHeight = 15;
 // a block
-function Block(x, y, z) {
+function Block(x, y, z, type) {
 	this.x = x;
 	this.y = y;
 	this.z = z;
+	this.type = type;
 }
 
 // var axesHelper = new THREE.AxesHelper( 5 );
@@ -60,6 +75,8 @@ function Block(x, y, z) {
 //construct blocks
 var blocks = [];
 
+const ID_GRAS = 0;
+const ID_COBBLESTONE = 1;
 
 camera.position.x = 0;
 camera.position.y = 0;
@@ -73,20 +90,30 @@ function getBlock(x, z) {
 	var xoff = inc*x;
 	var zoff = inc*z;
 	var v = Math.round(noise.perlin2(xoff, zoff) * amplitude / 5) *5;
-	return new Block(x * blockSize, v, z * blockSize);
+	return new Block(x * blockSize, v, z * blockSize, ID_GRAS);
 }
 
-var instancedChunk = undefined;
-function generateInstancedChunk() {
-	if(instancedChunk) scene.remove(instancedChunk);
+function addInstancedChunk(material, blocksArr) {
 	var blockBox = new THREE.BoxGeometry(5, 5, 5);
-	instancedChunk = new THREE.InstancedMesh(blockBox, materialArray, blocks.length)
-	for(var count=0; count < blocks.length; count++) {
-		var b = blocks[count];
+	var chunk = new THREE.InstancedMesh(blockBox, material, blocksArr.length)
+	for(var count=0; count < blocksArr.length; count++) {
+		var b = blocksArr[count];
 		let matrix = new THREE.Matrix4().makeTranslation( b.x, b.y, b.z );
-		instancedChunk.setMatrixAt(count, matrix);
-	}			
-	scene.add(instancedChunk);
+		chunk.setMatrixAt(count, matrix);
+	}
+	instancedChunks.push(chunk);
+	scene.add(chunk);
+}
+
+
+var instancedChunks = undefined;
+function generateInstancedChunk() {
+	if(instancedChunks !== undefined && instancedChunks.length != 0) {
+		instancedChunks.forEach( c => scene.remove(c) );
+	}
+	instancedChunks = [];
+	addInstancedChunk(grasMatArr, blocks.filter(b => b.type == ID_GRAS));
+	addInstancedChunk(cobblestoneMatArr, blocks.filter(b => b.type == ID_COBBLESTONE));
 }
 
 function generate() {
@@ -179,7 +206,16 @@ function getRaycastIntersection() {
 	pointer.y = -1 *0.5 * 2 + 1;
 
 	raycaster.setFromCamera(pointer, camera);
-	return raycaster.intersectObject(instancedChunk);
+
+	var minIntersect = undefined;
+	for( var i = 0; i < instancedChunks.length; i++) {
+		var intersect = raycaster.intersectObject(instancedChunks[i]);
+		if( (minIntersect === undefined || minIntersect[0] == undefined)
+			|| (intersect[0] !== undefined && minIntersect[0].distance > intersect[0].distance) ) {
+				minIntersect = intersect;
+		}
+	}
+	return minIntersect;
 }
 
 function getRaycastBlockInc(inc) {
@@ -239,7 +275,7 @@ function destroyBlock() {
 function placeBlock() {
 	var r = getRaycastBlock();
 	if(r === undefined) return;
-	var b = new Block(r.x, r.y, r.z);
+	var b = new Block(r.x, r.y, r.z, ID_COBBLESTONE);
 	placedBlocks.push(b);
 	blocks.push(b);
 	console.log("placing " + b.x + ", " + b.y + ", " + b.z)
